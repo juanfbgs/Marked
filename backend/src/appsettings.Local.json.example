@@ -1,0 +1,11 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=DATABASENAME;Username=postgres;Password=YOUR_PASSWORD"
+  },
+  "Jwt": {
+    "Key": "YOUR_32_CHARACTER_SECRET_KEY_HERE (Command: openssl rand -hex 32)",
+    "Issuer": "https://localhost:5001",
+    "Audience": "https://localhost:5001",
+    "ExpireDays": 1
+  }
+}

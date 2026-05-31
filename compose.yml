@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:alpine
+    environment:
+      POSTGRES_USER: ${MARKED_USER}
+      POSTGRES_PASSWORD: ${MARKED_PASSWORD}
+      POSTGRES_DB: ${MARKED_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdatamk:/var/lib/postgresql/data
+
+volumes:
+  pgdatamk:
