@@ -1,5 +1,6 @@
 using System.Text;
 using Marked.Data;
+using Marked.Features.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -31,6 +32,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!)),
         };
     });
+
+builder.Services.AddScoped<AuthService>();
 
 builder.Services.AddAuthorization();
 
