@@ -1,6 +1,8 @@
 
 using Marked.Data;
 using Marked.Domain;
+using Marked.Features.Shared;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,15 +10,18 @@ namespace Marked.Features.Auth;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController : BaseController
 {
     private readonly AuthService _authService;
     private readonly AppDbContext _context;
 
-    public AuthController(AuthService authService, AppDbContext context)
+    private readonly IConfiguration _config;
+
+    public AuthController(AuthService authService, AppDbContext context, IConfiguration config)
     {
         _authService = authService;
         _context = context;
+        _config = config;
     }
 
     [HttpPost("register")]
@@ -51,13 +56,52 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-
         if (user == null || !_authService.VerifyPassword(request.Password, user.PasswordHash))
             return Unauthorized("Invalid credentials.");
 
-
-        var (token, expiresAt) = _authService.GenerateJwtToken(user.Id, user.Username);
-
-        return Ok(new AuthResponse(token));
+        return Ok(await GenerateTokenPair(user));
     }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout()
+    {
+        var userId = GetCurrentUserId();
+        var user = await _context.Users.FindAsync(userId);
+
+        if (user is not null)
+        {
+            user.RefreshToken = null;
+            user.RefreshTokenExpiresAt = null;
+            await _context.SaveChangesAsync();
+        }
+
+        return Ok();
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.RefreshToken == request.RefreshToken
+                                   && u.RefreshTokenExpiresAt > DateTime.UtcNow);
+
+        if (user is null)
+            return Unauthorized("Invalid or expired refresh token.");
+
+        return Ok(await GenerateTokenPair(user));
+    }
+
+    private async Task<AuthResponse> GenerateTokenPair(User user)
+    {
+        var accessToken = _authService.GenerateAccessToken(user.Id, user.Username);
+        var refreshToken = _authService.GenerateRefreshToken();
+
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(_config.GetValue<int>("JwtSettings:ExpirationInDays"));
+        await _context.SaveChangesAsync();
+
+        return new AuthResponse(accessToken, refreshToken);
+    }
+
 }

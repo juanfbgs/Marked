@@ -6,6 +6,13 @@
     "Key": "YOUR_32_CHARACTER_SECRET_KEY_HERE (Command: openssl rand -hex 32)",
     "Issuer": "https://localhost:5001",
     "Audience": "https://localhost:5001",
-    "ExpireDays": 1
+    "ExpirationInMinutes": 15,
+    "ExpirationInDays": 7
+  },
+  "S3": {
+    "ServiceUrl": "http://localhost:8333",
+    "BucketName": "bookmark-images",
+    "AccessKey": "admin",
+    "SecretKey": "secret"
   }
 }

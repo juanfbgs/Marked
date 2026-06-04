@@ -1,6 +1,7 @@
 using System.Text;
 using Marked.Data;
 using Marked.Features.Auth;
+using Marked.Features.Uploads;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -34,6 +35,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IS3Service, S3Service>();
 
 builder.Services.AddAuthorization();
 

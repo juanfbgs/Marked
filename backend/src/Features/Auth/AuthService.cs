@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using BC = BCrypt.Net.BCrypt;
@@ -18,7 +19,7 @@ public class AuthService(IConfiguration _config)
         return BC.Verify(password, hashedPassword);
     }
 
-    public (string Token, DateTime ExpiresAt) GenerateJwtToken(Guid userId, string username)
+    public string GenerateAccessToken(Guid userId, string username)
     {
         var claims = new[]
         {
@@ -29,12 +30,7 @@ public class AuthService(IConfiguration _config)
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JwtSettings:Secret"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        if (!int.TryParse(_config["JwtSettings:ExpireDays"], out var expireDays))
-        {
-            expireDays = 7;
-        }
-
-        var expiresAt = DateTime.UtcNow.AddDays(expireDays);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_config.GetValue<int>("JwtSettings:ExpirationInMinutes"));
 
         var token = new JwtSecurityToken(
             issuer: _config["JwtSettings:Issuer"],
@@ -44,6 +40,11 @@ public class AuthService(IConfiguration _config)
             signingCredentials: creds
         );
 
-        return (new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public string GenerateRefreshToken()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
     }
 }

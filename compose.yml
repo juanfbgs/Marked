@@ -9,6 +9,17 @@ services:
       - "5432:5432"
     volumes:
       - pgdatamk:/var/lib/postgresql
-
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    ports:
+      - "8333:8333"
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      S3_BUCKET: ${S3_BUCKET}
+    command: server -s3 -s3.port=8333 -dir=/data
+    volumes:
+      - seaweed_data:/data
 volumes:
   pgdatamk:
+  seaweed_data:

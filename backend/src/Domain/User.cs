@@ -7,5 +7,8 @@ public class User : BaseEntity
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
 
+    public string? RefreshToken { get; set; }
+    public DateTime? RefreshTokenExpiresAt { get; set; }
+
     public ICollection<Bookmark> Bookmarks { get; set; } = new List<Bookmark>();
 }
