@@ -1,1 +1,74 @@
-<p>register works!</p>
+<div class="min-h-[calc(100vh-64px)] flex items-center justify-center p-4">
+  <div class="card bg-base-100 w-full max-w-2xl shadow-xl border border-base-300 rounded-xl">
+    <div class="card-body gap-6">
+      
+      <div class="text-center">
+        <h2 class="text-3xl font-bold text-indigo-600">Create an Account</h2>
+        <p class="text-sm text-base-content/60 mt-2">Join us today! Please fill in your details.</p>
+      </div>
+
+      <form class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- First Name -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">First Name</span>
+          </label>
+          <input type="text" placeholder="John" class="input input-bordered input-neutral rounded-md w-full focus:outline-offset-1 focus:border-indigo-500 focus:outline-indigo-500" required />
+        </div>
+
+        <!-- Last Name -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">Last Name</span>
+          </label>
+          <input type="text" placeholder="Doe" class="input input-bordered input-neutral rounded-md w-full focus:outline-offset-1 focus:border-indigo-500 focus:outline-indigo-500" required />
+        </div>
+
+        <!-- Username -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">Username</span>
+          </label>
+          <input type="text" placeholder="johndoe123" class="input input-bordered input-neutral rounded-md w-full focus:outline-offset-1 focus:border-indigo-500 focus:outline-indigo-500" required />
+        </div>
+
+        <!-- Email -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">Email Address</span>
+          </label>
+          <input type="email" placeholder="john@example.com" class="input input-bordered input-neutral rounded-md w-full focus:outline-offset-1 focus:border-indigo-500 focus:outline-indigo-500" required />
+        </div>
+
+        <!-- Password -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">Password</span>
+          </label>
+          <input type="password" placeholder="••••••••" class="input input-bordered input-neutral rounded-md w-full focus:outline-offset-1 focus:border-indigo-500 focus:outline-indigo-500" required />
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">Confirm Password</span>
+          </label>
+          <input type="password" placeholder="••••••••" class="input input-bordered input-neutral rounded-md w-full focus:outline-offset-1 focus:border-indigo-500 focus:outline-indigo-500" required />
+        </div>
+
+        <div class="form-control md:col-span-2 mt-4">
+          <button type="submit" class="btn bg-indigo-600 hover:bg-indigo-700 text-white border-none rounded-md w-full tracking-wide uppercase">
+            Register
+          </button>
+        </div>
+
+      </form>
+
+      <div class="text-center text-sm text-base-content/70 mt-2">
+        Already have an account? 
+        <a class="text-indigo-600 font-semibold no-underline hover:underline cursor-pointer ml-1" routerLink="/auth/login">Log In</a>
+      </div>
+
+    </div>
+  </div>
+</div>
