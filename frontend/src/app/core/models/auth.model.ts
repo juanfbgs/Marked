@@ -20,3 +20,10 @@ export interface AuthResponse {
 export interface RefreshRequest {
   refreshToken: string;
 }
+
+export interface User {
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+}

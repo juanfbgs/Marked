@@ -6,7 +6,7 @@
 
 @font-face {
   font-family: 'Instrument Sans';
-  src: url('/assets/fonts/InstrumentSans-Regular.woff2.woff2') format('woff2');
+  src: url('./assets/fonts/InstrumentSans-Regular.woff2') format('woff2');
 }
 
 @theme {
