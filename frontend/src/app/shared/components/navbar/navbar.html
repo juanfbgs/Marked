@@ -1,16 +1,32 @@
 <div class="navbar bg-base-100 shadow-sm px-4">
-    <div class="flex-1">
-        <a class="link link-hover no-underline text-indigo-600 font-bold hover:text-indigo-700 text-xl normal-case" routerLink="/">Marked</a>
-    </div>
+  <div class="flex-1">
+    <a class="link link-hover no-underline text-indigo-600 font-bold hover:text-indigo-700 text-xl normal-case"
+      routerLink="/">Marked</a>
+  </div>
 
-    <div class="flex-none flex items-center gap-5 px-2">
-        <a
-            class="text-base-content/70 hover:text-indigo-400 text-sm sm:text-base font-normal no-underline transition-colors duration-200 cursor-pointer" routerLink="/auth/login">
-            Login
-        </a>
-        <a
-            class="text-base-content/70 hover:text-indigo-400 text-sm sm:text-base font-normal no-underline transition-colors duration-200 cursor-pointer" routerLink="/auth/register">
-            Register
-        </a>
+  <div class="flex-none flex items-center gap-5 px-2">
+    @if (isLoggedIn()) {
+    <div class="flex items-center gap-3 text-sm">
+      <span class="text-base-content/80">
+        Welcome, <span class="font-semibold text-base-content">{{ currentUser()?.username }}</span>
+      </span>
+
+      <span class="h-4 w-px bg-base-content/20" aria-hidden="true"></span>
+
+      <button (click)="onLogout()"
+        class="text-base-content/60 hover:text-red-500 font-medium transition-colors duration-200 cursor-pointer bg-transparent border-none p-0">
+        Logout
+      </button>
     </div>
+    } @else {
+    <a class="text-base-content/70 hover:text-indigo-400 text-sm sm:text-base font-normal no-underline transition-colors duration-200 cursor-pointer"
+      routerLink="/auth/login">
+      Login
+    </a>
+    <a class="text-base-content/70 hover:text-indigo-400 text-sm sm:text-base font-normal no-underline transition-colors duration-200 cursor-pointer"
+      routerLink="/auth/register">
+      Register
+    </a>
+    }
+  </div>
 </div>

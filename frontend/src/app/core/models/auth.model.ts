@@ -22,8 +22,9 @@ export interface RefreshRequest {
 }
 
 export interface User {
-  firstName: string;
-  lastName: string;
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
   username: string;
-  email: string;
 }

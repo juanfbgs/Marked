@@ -14,21 +14,20 @@ export class AuthService {
   private readonly baseUrl = `${environment.API_URL}/auth`;
 
   private readonly _currentUser = signal<User | null>(null);
-  private readonly _isChecking = signal(true);
 
   readonly currentUser = this._currentUser.asReadonly();
   readonly isLoggedIn = computed(() => this._currentUser() !== null);
-  readonly isChecking = this._isChecking.asReadonly();
 
   constructor() {
-    const token = localStorage.getItem('access_token');
-    if (token) this.fetchCurrentUser();
-    else this._isChecking.set(false);
+    this.loadUserFromToken();
   }
 
   login(data: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.baseUrl}/login`, data).pipe(
-      tap((res) => this.handleAuthResponse(res)),
+      tap((res) => {
+        this.saveTokens(res);
+        this.setUserFromToken(res.accessToken);
+      }),
     );
   }
 
@@ -36,16 +35,19 @@ export class AuthService {
     return this.http.post<void>(`${this.baseUrl}/register`, data);
   }
 
-  logout(): void {
-    this.http.post(`${this.baseUrl}/logout`, {}).pipe(
-      finalize(() => this.clearAuth()),
-    ).subscribe();
+  logout(): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/logout`, {}).pipe(
+      tap({ finalize: () => this.clearAuth() }),
+    );
   }
 
   refreshToken(): Observable<AuthResponse> {
     const refreshToken = localStorage.getItem('refresh_token');
     return this.http.post<AuthResponse>(`${this.baseUrl}/refresh-token`, { refreshToken }).pipe(
-      tap((res) => this.handleAuthResponse(res)),
+      tap((res) => {
+        this.saveTokens(res);
+        this.setUserFromToken(res.accessToken);
+      }),
     );
   }
 
@@ -53,25 +55,33 @@ export class AuthService {
     return localStorage.getItem('access_token');
   }
 
-  private handleAuthResponse(res: AuthResponse): void {
+  private loadUserFromToken(): void {
+    const token = localStorage.getItem('access_token');
+    if (token) this.setUserFromToken(token);
+  }
+
+  private setUserFromToken(token: string): void {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      this._currentUser.set({
+        id: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],
+        username: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
+      });
+    } catch {
+      this._currentUser.set(null);
+    }
+  }
+
+  private saveTokens(res: AuthResponse): void {
     localStorage.setItem('access_token', res.accessToken);
     localStorage.setItem('refresh_token', res.refreshToken);
-    this.fetchCurrentUser();
   }
 
   private clearAuth(): void {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     this._currentUser.set(null);
-    this._isChecking.set(false);
     this.router.navigate(['/login']);
   }
 
-  private fetchCurrentUser(): void {
-    this.http.get<User>(`${environment.API_URL}/user/profile`).pipe(
-      catchError(() => of(null)),
-      tap({ next: (user) => this._currentUser.set(user) }),
-      finalize(() => this._isChecking.set(false)),
-    ).subscribe();
-  }
 }
