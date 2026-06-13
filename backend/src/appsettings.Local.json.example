@@ -12,6 +12,7 @@
   "S3": {
     "ServiceUrl": "http://localhost:8333",
     "BucketName": "bookmark-images",
+    "PresignedUrlExpiryMinutes": 15,
     "AccessKey": "admin",
     "SecretKey": "secret"
   }

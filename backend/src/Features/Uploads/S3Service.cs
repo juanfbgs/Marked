@@ -44,6 +44,18 @@ public class S3Service : IS3Service
         return key;
     }
 
+    public async Task<string> GeneratePresignedUrlAsync(string bucketName, string key, int expiresInMinutes)
+    {
+        var request = new GetPreSignedUrlRequest
+        {
+            BucketName = bucketName,
+            Key = key,
+            Protocol = Protocol.HTTP,
+            Expires = DateTime.UtcNow.AddMinutes(expiresInMinutes)
+        };
+        return await Task.FromResult(_s3.GetPreSignedURL(request));
+    }
+
     public async Task<GetObjectResponse> GetObjectAsync(string bucketName, string key)
     {
         return await _s3.GetObjectAsync(bucketName, key);

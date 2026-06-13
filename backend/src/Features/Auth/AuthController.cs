@@ -1,7 +1,7 @@
 
 using Marked.Data;
 using Marked.Domain;
-using Marked.Features.Shared;
+using Marked.Features.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +10,7 @@ namespace Marked.Features.Auth;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : BaseController
+public class AuthController : ControllerBase
 {
     private readonly AuthService _authService;
     private readonly AppDbContext _context;
@@ -66,7 +66,7 @@ public class AuthController : BaseController
     [Authorize]
     public async Task<IActionResult> Logout()
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetCurrentUserId();
         var user = await _context.Users.FindAsync(userId);
 
         if (user is not null)
@@ -79,7 +79,7 @@ public class AuthController : BaseController
         return Ok();
     }
 
-    [HttpPost("refresh")]
+    [HttpPost("refresh-token")]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
     {
         var user = await _context.Users

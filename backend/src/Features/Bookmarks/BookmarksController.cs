@@ -1,7 +1,6 @@
-using System.Security.Claims;
 using Marked.Data;
 using Marked.Domain;
-using Marked.Features.Shared;
+using Marked.Features.Extensions;
 using Marked.Features.Uploads;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,90 +11,70 @@ namespace Marked.Features.Bookmarks;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class BookmarksController : BaseController
+public class BookmarksController(AppDbContext context, IS3Service s3, IConfiguration config) : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private string BucketName => config["S3:BucketName"] ?? throw new InvalidOperationException("S3 Bucket Name is not configured.");
 
-    private readonly IS3Service _s3;
-
-    private readonly IConfiguration _config;
-
-
-    public BookmarksController(AppDbContext context, IS3Service s3, IConfiguration config)
-    {
-        _context = context;
-        _s3 = s3;
-        _config = config;
-    }
-
-    private string BucketName => _config["S3:BucketName"]!;
-
+    private int PresignedUrlExpiryMinutes => config.GetValue("S3:PresignedUrlExpiryMinutes", 15);
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<BookmarkResponse>>> GetBookmarks()
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetCurrentUserId();
 
-        var bookmarks = await _context.Bookmarks
-        .Where(b => b.UserId == userId)
-        .OrderByDescending(b => b.CreatedAt)
-        .Select(b => new
-        {
-            b.Id,
-            b.Title,
-            b.Url,
-            b.ImageUrl,
-            b.CreatedAt,
-        })
-        .ToListAsync();
+        var bookmarks = await context.Bookmarks
+            .AsNoTracking()
+            .Where(b => b.UserId == userId)
+            .OrderByDescending(b => b.CreatedAt)
+            .Select(b => new { b.Id, b.Title, b.Url, b.ImageUrl, b.CreatedAt })
+            .ToListAsync();
 
-        var result = bookmarks.Select(b => new BookmarkResponse(
+        // 3. Modern .NET parallel execution optimization
+        var responseTasks = bookmarks.Select(async b => new BookmarkResponse(
             b.Id,
             b.Title,
             b.Url,
             b.ImageUrl is not null
-                ? Url.Action(nameof(GetBookmarkImage), new { id = b.Id })
+                ? await s3.GeneratePresignedUrlAsync(BucketName, b.ImageUrl, PresignedUrlExpiryMinutes)
                 : null,
             b.CreatedAt
         ));
 
+        var result = await Task.WhenAll(responseTasks);
         return Ok(result);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<BookmarkResponse>> GetBookmark(Guid id)
     {
-        var userId = GetCurrentUserId();
-        var bookmark = await _context.Bookmarks
-        .Where(b => b.Id == id && b.UserId == userId)
-        .Select(b => new { b.Id, b.Title, b.Url, b.ImageUrl, b.CreatedAt })
-        .FirstOrDefaultAsync();
+        var userId = User.GetCurrentUserId();
+
+        var bookmark = await context.Bookmarks
+            .AsNoTracking()
+            .Where(b => b.Id == id && b.UserId == userId)
+            .Select(b => new { b.Id, b.Title, b.Url, b.ImageUrl, b.CreatedAt })
+            .FirstOrDefaultAsync();
 
         if (bookmark is null)
-            return NotFound("Bookmark not found.");
+            return Problem(detail: "Bookmark not found.", statusCode: StatusCodes.Status404NotFound);
 
-        return Ok(new BookmarkResponse(
-            bookmark.Id,
-            bookmark.Title,
-            bookmark.Url,
-            bookmark.ImageUrl is not null
-                ? Url.Action(nameof(GetBookmarkImage), new { id = bookmark.Id })
-                : null,
-            bookmark.CreatedAt
-        ));
+        string? presignedUrl = bookmark.ImageUrl is not null
+            ? await s3.GeneratePresignedUrlAsync(BucketName, bookmark.ImageUrl, PresignedUrlExpiryMinutes)
+            : null;
+
+        return Ok(new BookmarkResponse(bookmark.Id, bookmark.Title, bookmark.Url, presignedUrl, bookmark.CreatedAt));
     }
 
     [HttpPost]
-    [RequestSizeLimit(10 * 1024 * 1024)] // 10MB
-    public async Task<ActionResult<BookmarkResponse>> CreateBookmark([FromForm] CreateBookmarkRequest request)
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<CreatedAtActionResult> CreateBookmark([FromForm] CreateBookmarkRequest request)
     {
-        var userId = GetCurrentUserId();
-
+        var userId = User.GetCurrentUserId();
         string? imageUrl = null;
 
         if (request.Image is not null)
         {
-            imageUrl = await _s3.UploadAsync(
+            imageUrl = await s3.UploadAsync(
                 request.Image.OpenReadStream(),
                 request.Image.FileName,
                 request.Image.ContentType
@@ -110,31 +89,27 @@ public class BookmarksController : BaseController
             UserId = userId
         };
 
+        context.Bookmarks.Add(bookmark);
+        await context.SaveChangesAsync();
 
-        _context.Bookmarks.Add(bookmark);
-        await _context.SaveChangesAsync();
+        string? presignedUrl = bookmark.ImageUrl is not null
+            ? await s3.GeneratePresignedUrlAsync(BucketName, bookmark.ImageUrl, PresignedUrlExpiryMinutes)
+            : null;
 
-        var bookmarkResponse = new BookmarkResponse(
-        bookmark.Id,
-        bookmark.Title,
-        bookmark.Url,
-        bookmark.ImageUrl is not null
-            ? Url.Action(nameof(GetBookmarkImage), new { id = bookmark.Id })
-            : null,
-        bookmark.CreatedAt
-    );
-
-        return CreatedAtAction(nameof(GetBookmark), new { id = bookmark.Id }, bookmarkResponse);
+        var response = new BookmarkResponse(bookmark.Id, bookmark.Title, bookmark.Url, presignedUrl, bookmark.CreatedAt);
+        return CreatedAtAction(nameof(GetBookmark), new { id = bookmark.Id }, response);
     }
 
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateBookmark(Guid id, [FromForm] UpdateBookmarkRequest request)
     {
-        var userId = GetCurrentUserId();
-        var bookmark = await _context.Bookmarks
-        .FirstOrDefaultAsync(b => b.Id == id && b.UserId == userId);
+        var userId = User.GetCurrentUserId();
 
-        if (bookmark == null) return NotFound("Bookmark not found.");
+        var bookmark = await context.Bookmarks
+            .FirstOrDefaultAsync(b => b.Id == id && b.UserId == userId);
+
+        if (bookmark is null)
+            return Problem(detail: "Bookmark not found.", statusCode: StatusCodes.Status404NotFound);
 
         bookmark.Title = request.Title;
         bookmark.Url = request.Url;
@@ -142,55 +117,36 @@ public class BookmarksController : BaseController
         if (request.Image is not null)
         {
             if (bookmark.ImageUrl is not null)
-                await _s3.DeleteAsync(bookmark.ImageUrl);
+                await s3.DeleteAsync(bookmark.ImageUrl);
 
-            bookmark.ImageUrl = await _s3.UploadAsync(
+            bookmark.ImageUrl = await s3.UploadAsync(
                 request.Image.OpenReadStream(),
                 request.Image.FileName,
                 request.Image.ContentType
             );
         }
 
-        await _context.SaveChangesAsync();
-
+        await context.SaveChangesAsync();
         return NoContent();
     }
-
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteBookmark(Guid id)
     {
-        var userId = GetCurrentUserId();
-        var bookmark = await _context.Bookmarks
+        var userId = User.GetCurrentUserId();
+
+        var bookmark = await context.Bookmarks
             .FirstOrDefaultAsync(b => b.Id == id && b.UserId == userId);
 
         if (bookmark is null)
-            return NotFound("Bookmark not found.");
+            return Problem(detail: "Bookmark not found.", statusCode: StatusCodes.Status404NotFound);
 
         if (bookmark.ImageUrl is not null)
-            await _s3.DeleteAsync(bookmark.ImageUrl);
+            await s3.DeleteAsync(bookmark.ImageUrl);
 
-        _context.Bookmarks.Remove(bookmark);
-        await _context.SaveChangesAsync();
+        context.Bookmarks.Remove(bookmark);
+        await context.SaveChangesAsync();
 
         return NoContent();
-    }
-
-    [HttpGet("{id}/image")]
-    public async Task<IActionResult> GetBookmarkImage(Guid id)
-    {
-        var userId = GetCurrentUserId();
-
-        var imageUrl = await _context.Bookmarks
-            .Where(b => b.Id == id && b.UserId == userId)
-            .Select(b => b.ImageUrl)
-            .FirstOrDefaultAsync();
-
-        if (imageUrl is null)
-            return NotFound();
-
-        var imageData = await _s3.GetObjectAsync(BucketName, imageUrl);
-
-        return File(imageData.ResponseStream, imageData.Headers.ContentType);
     }
 }

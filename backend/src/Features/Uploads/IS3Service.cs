@@ -8,5 +8,7 @@ public interface IS3Service
 
     Task<GetObjectResponse> GetObjectAsync(string bucketName, string key);
     
+    Task<string> GeneratePresignedUrlAsync(string bucketName, string key, int expiresInMinutes = 15);
+
     Task DeleteAsync(string fileUrl);
 }
