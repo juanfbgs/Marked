@@ -1,0 +1,79 @@
+<form [formRoot]="form" class="space-y-5 p-1">
+  
+  <div class="form-control w-full">
+    <label class="label py-1">
+      <span class="label-text font-semibold text-neutral">Title</span>
+    </label>
+    <input [formField]="form.title" 
+           class="input w-full bg-base-200/40 focus:input-primary transition-all duration-200" 
+           [class.input-error]="form.title().touched() && form.title().errors().length"
+           placeholder="My Bookmark" />
+    @if (form.title().touched() && form.title().errors().length) {
+      <label class="label py-1">
+        <span class="label-text-alt text-error font-medium flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          {{ form.title().errors()[0].message }}
+        </span>
+      </label>
+    }
+  </div>
+
+  <div class="form-control w-full">
+    <label class="label py-1">
+      <span class="label-text font-semibold text-neutral">URL</span>
+    </label>
+    <input [formField]="form.url" 
+           class="input w-full bg-base-200/40 focus:input-primary transition-all duration-200" 
+           [class.input-error]="form.url().touched() && form.url().errors().length"
+           placeholder="https://example.com" />
+    @if (form.url().touched() && form.url().errors().length) {
+      <label class="label py-1">
+        <span class="label-text-alt text-error font-medium flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          {{ form.url().errors()[0].message }}
+        </span>
+      </label>
+    }
+  </div>
+
+  <div class="form-control w-full">
+    <label class="label py-1">
+      <span class="label-text font-semibold text-neutral">
+        Image <span class="text-xs font-normal text-base-content/50 ml-1">(optional)</span>
+      </span>
+    </label>
+    <input type="file" 
+           (change)="onFileSelected($event)" 
+           accept="image/*"
+           class="file-input file-input-bordered file-input-primary w-full bg-base-200/40" />
+    @if (image(); as file) {
+      <label class="label py-1">
+        <span class="label-text-alt text-success font-medium flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          {{ file.name }}
+        </span>
+      </label>
+    }
+  </div>
+
+  @if (form().errors().length) {
+    <div class="alert alert-error text-sm p-3 rounded-lg shadow-sm flex gap-2 mt-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <span>{{ form().errors()[0].message }}</span>
+    </div>
+  }
+
+  <div class="flex items-center justify-end gap-2 pt-3 border-t border-base-200 mt-6">
+    <button type="button" 
+            (click)="cancelled.emit()"
+            class="btn btn-sm h-10 btn-ghost rounded-md font-medium px-4">
+      Cancel
+    </button>
+    <button type="submit" 
+            [disabled]="form().invalid()"
+            class="btn btn-sm h-10 btn-primary rounded-md font-medium px-5 shadow-sm">
+      Save
+    </button>
+  </div>
+
+</form>
